@@ -1,84 +1,43 @@
-import pandas as pd
+"""
+generate_drivers.py
+-------------------
+Generates 500 drivers with ratings and delivery counts.
+Output: data/raw/Drivers.csv
+"""
+
+import csv
 import random
-from pathlib import Path
-from faker import Faker
+import os
+import sys
 
-fake = Faker("en_IN")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.config import RAW_DATA_DIR
 
-# ==============================
-# Create Project Paths
-# ==============================
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+def generate_drivers(num_drivers=500):
+    drivers = []
+    for i in range(1, num_drivers + 1):
+        prob = random.random()
+        if prob > 0.7:
+            rating = round(random.uniform(4.5, 5.0), 1)
+        elif prob > 0.2:
+            rating = round(random.uniform(3.8, 4.4), 1)
+        else:
+            rating = round(random.uniform(2.0, 3.7), 1)
 
-OUTPUT_FILE = DATA_DIR / "Drivers.csv"
+        drivers.append({
+            'DriverID': f"D{str(i).zfill(4)}",
+            'DriverRating': rating,
+            'TotalDeliveries': random.randint(50, 5000)
+        })
+    return drivers
 
-# ==============================
-# Data Lists
-# ==============================
 
-cities = [
-    "Jaipur",
-    "Delhi",
-    "Mumbai",
-    "Pune",
-    "Bengaluru",
-    "Hyderabad",
-    "Ahmedabad",
-    "Chandigarh",
-    "Lucknow",
-    "Indore"
-]
-
-vehicles = [
-    "Bike",
-    "Scooter"
-]
-
-status = [
-    "Active",
-    "Inactive"
-]
-
-# ==============================
-# Generate Drivers
-# ==============================
-
-drivers = []
-
-for i in range(1, 501):
-
-    drivers.append({
-
-        "DriverID": i,
-
-        "DriverName": fake.name(),
-
-        "ExperienceYears": random.randint(1, 10),
-
-        "Vehicle": random.choice(vehicles),
-
-        "City": random.choice(cities),
-
-        "Rating": round(random.uniform(3.5, 5.0), 1),
-
-        "Status": random.choices(
-            status,
-            weights=[90, 10]
-        )[0]
-
-    })
-
-# ==============================
-# DataFrame
-# ==============================
-
-df = pd.DataFrame(drivers)
-
-df.to_csv(OUTPUT_FILE, index=False)
-
-print("\n✅ Drivers.csv Generated Successfully")
-print(f"\n📂 File Saved At:\n{OUTPUT_FILE}")
-print(f"\n🚚 Total Drivers: {len(df)}")
+if __name__ == '__main__':
+    drivers = generate_drivers(500)
+    output_file = os.path.join(RAW_DATA_DIR, 'Drivers.csv')
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['DriverID', 'DriverRating', 'TotalDeliveries'])
+        writer.writeheader()
+        writer.writerows(drivers)
+    print(f"✅ Generated {len(drivers)} drivers → {output_file}")

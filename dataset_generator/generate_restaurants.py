@@ -1,90 +1,54 @@
-import pandas as pd
+"""
+generate_restaurants.py
+-----------------------
+Generates 250 restaurants with cuisines, names, and ratings.
+Output: data/raw/Restaurants.csv
+"""
+
+import csv
 import random
-from pathlib import Path
+import os
+import sys
 
-# ==============================
-# Create Project Paths
-# ==============================
+# Add project root to path for config import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.config import RAW_DATA_DIR
 
-# Get the project root directory
-BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Create the data folder if it doesn't exist
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+def generate_restaurants(num_restaurants=250):
+    cuisines = ['Fast Food', 'Pizza', 'Italian', 'Indian', 'Chinese', 'Healthy', 'Desserts', 'Mexican']
+    names_part1 = ['Taste of', 'Spice', 'Golden', 'Urban', 'The', 'Happy', 'Hot', 'Quick', 'Fresh']
+    names_part2 = ['Bites', 'Bowl', 'Plate', 'Grill', 'Wok', 'Spoon', 'Oven', 'Kitchen', 'Diner']
 
-# Output file path
-OUTPUT_FILE = DATA_DIR / "Restaurants.csv"
+    restaurants = []
+    for i in range(1, num_restaurants + 1):
+        name = f"{random.choice(names_part1)} {random.choice(names_part2)}"
+        name = f"{name} {i}" if any(r['RestaurantName'] == name for r in restaurants) else name
 
-# ==============================
-# Restaurant Data
-# ==============================
+        # Rating skew: more 4-5 star restaurants than 2-3 star
+        rating_prob = random.random()
+        if rating_prob > 0.8:
+            rating = round(random.uniform(4.5, 5.0), 1)
+        elif rating_prob > 0.4:
+            rating = round(random.uniform(3.8, 4.4), 1)
+        else:
+            rating = round(random.uniform(2.5, 3.7), 1)
 
-restaurant_names = [
-    "Pizza Hut", "Dominos", "KFC", "Burger King", "McDonald's",
-    "Subway", "Biryani House", "Royal Kitchen", "Tandoori Nights",
-    "Food Palace", "Spice Hub", "The Curry Bowl", "Urban Tadka",
-    "Grill Master", "The Food Corner", "Desi Rasoi", "Cafe Aroma",
-    "Punjabi Dhaba", "Sizzling Spoon", "The Hungry Chef",
-    "Taste of India", "Wrap World", "South Spice", "Chinese Wok",
-    "Pizza Point", "Burger Station", "Hot & Crispy", "Masala Magic",
-    "BBQ Nation", "Street Bites", "Tasty Treat", "Crispy Chicken",
-    "Green Bowl", "Cafe Delight", "Pasta House", "Snack Stop",
-    "Royal Biryani", "Momo Point", "Ice Cream Hub", "Fresh Kitchen",
-    "Food Express", "Hungry Birds", "Chef's Table", "Meal Box",
-    "Kitchen Story", "Food Factory", "The Oven", "Quick Bites",
-    "Eat Fresh", "Daily Dine"
-]
+        restaurants.append({
+            'RestaurantID': f"R{str(i).zfill(4)}",
+            'RestaurantName': name,
+            'Cuisine': random.choice(cuisines),
+            'Rating': rating
+        })
 
-cities = [
-    "Jaipur", "Delhi", "Mumbai", "Pune", "Bengaluru",
-    "Hyderabad", "Ahmedabad", "Chandigarh", "Lucknow", "Indore"
-]
+    return restaurants
 
-cuisines = [
-    "North Indian",
-    "South Indian",
-    "Chinese",
-    "Pizza",
-    "Burger",
-    "Fast Food",
-    "Biryani",
-    "Cafe",
-    "Desserts",
-    "Multi Cuisine"
-]
 
-# ==============================
-# Generate Restaurant Records
-# ==============================
-
-restaurants = []
-
-for i in range(1, 51):
-    restaurants.append({
-        "RestaurantID": i,
-        "RestaurantName": restaurant_names[i - 1],
-        "Cuisine": random.choice(cuisines),
-        "City": random.choice(cities),
-        "Rating": round(random.uniform(3.5, 5.0), 1)
-    })
-
-# ==============================
-# Create DataFrame
-# ==============================
-
-df = pd.DataFrame(restaurants)
-
-# ==============================
-# Save CSV
-# ==============================
-
-df.to_csv(OUTPUT_FILE, index=False)
-
-# ==============================
-# Success Message
-# ==============================
-
-print("\n✅ Restaurants.csv generated successfully!")
-print(f"\n📂 File Location:\n{OUTPUT_FILE}")
-print(f"\n📊 Total Records: {len(df)}")
+if __name__ == '__main__':
+    rests = generate_restaurants(250)
+    output_file = os.path.join(RAW_DATA_DIR, 'Restaurants.csv')
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['RestaurantID', 'RestaurantName', 'Cuisine', 'Rating'])
+        writer.writeheader()
+        writer.writerows(rests)
+    print(f"✅ Generated {len(rests)} restaurants → {output_file}")

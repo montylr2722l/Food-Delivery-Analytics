@@ -1,0 +1,67 @@
+{
+  "name": "FoodDeliveryPipeline",
+  "properties": {
+    "description": "End-to-end pipeline: copies raw CSVs from ADLS to Databricks, runs transformation and sentiment notebooks, then writes results to Azure SQL Warehouse.",
+    "activities": [
+      {
+        "name": "CopyRawDataToStaging",
+        "type": "Copy",
+        "description": "Copy raw CSV files from ADLS Gen2 landing zone to staging container.",
+        "inputs": [
+          {
+            "referenceName": "ADLS_RawCSV",
+            "type": "DatasetReference"
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "ADLS_StagingCSV",
+            "type": "DatasetReference"
+          }
+        ]
+      },
+      {
+        "name": "RunExplorationNotebook",
+        "type": "DatabricksNotebook",
+        "description": "Run 01_data_exploration notebook for data quality checks.",
+        "dependsOn": [
+          {
+            "activity": "CopyRawDataToStaging",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Workspace/FoodDelivery/01_data_exploration"
+        }
+      },
+      {
+        "name": "RunTransformationNotebook",
+        "type": "DatabricksNotebook",
+        "description": "Run 02_transformation notebook to compute RestaurantPerformance metrics.",
+        "dependsOn": [
+          {
+            "activity": "RunExplorationNotebook",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Workspace/FoodDelivery/02_transformation"
+        }
+      },
+      {
+        "name": "RunSentimentNotebook",
+        "type": "DatabricksNotebook",
+        "description": "Run 03_sentiment_analysis notebook to compute ReviewsSentiment metrics.",
+        "dependsOn": [
+          {
+            "activity": "RunTransformationNotebook",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Workspace/FoodDelivery/03_sentiment_analysis"
+        }
+      }
+    ]
+  }
+}

@@ -1,168 +1,132 @@
-import pandas as pd
+"""
+generate_orders.py
+------------------
+Generates 100,000 realistic food delivery orders.
+- Cuisine-based preparation times
+- Peak-hour order distribution
+- Driver wait time calculations
+- Payment methods & order statuses
+Output: data/raw/Orders.csv
+"""
+
+import csv
 import random
-from pathlib import Path
-from faker import Faker
+import os
+import sys
 from datetime import datetime, timedelta
 
-fake = Faker("en_IN")
-
-# ======================================================
-# Project Paths
-# ======================================================
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-DATA_DIR = BASE_DIR / "data"
-
-OUTPUT_FILE = DATA_DIR / "Orders.csv"
-
-# ======================================================
-# Load Existing CSV Files
-# ======================================================
-
-restaurants = pd.read_csv(DATA_DIR / "Restaurants.csv")
-drivers = pd.read_csv(DATA_DIR / "Drivers.csv")
-
-print("Restaurants Loaded :", len(restaurants))
-print("Drivers Loaded     :", len(drivers))
-
-# ======================================================
-# Constants
-# ======================================================
-
-TOTAL_ORDERS = 100000
-
-payment_methods = [
-    "UPI",
-    "Credit Card",
-    "Debit Card",
-    "Cash"
-]
-
-order_status = [
-    "Delivered",
-    "Cancelled"
-]
-
-cities = [
-    "Jaipur",
-    "Delhi",
-    "Mumbai",
-    "Pune",
-    "Bengaluru",
-    "Hyderabad",
-    "Ahmedabad",
-    "Chandigarh",
-    "Lucknow",
-    "Indore"
-]
-
-orders = []
-
-print("\nGenerating Orders...\n")
-
-# ======================================================
-# Helper Function: Generate Random Date
-# ======================================================
-
-def generate_order_date():
-    """
-    Returns a random date between
-    1 Jan 2025 and 31 Dec 2025
-    """
-
-    start_date = datetime(2025, 1, 1)
-    end_date = datetime(2025, 12, 31)
-
-    days = (end_date - start_date).days
-
-    return start_date + timedelta(days=random.randint(0, days))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.config import RAW_DATA_DIR
+from dataset_generator.utils import (
+    generate_order_time, get_preparation_time,
+    get_driver_arrival_offset, get_delivery_duration
+)
 
 
-# ======================================================
-# Helper Function: Generate Order Time
-# ======================================================
+def load_data():
+    restaurants = []
+    with open(os.path.join(RAW_DATA_DIR, 'Restaurants.csv'), 'r', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            restaurants.append(row)
 
-def generate_order_time():
+    drivers = []
+    with open(os.path.join(RAW_DATA_DIR, 'Drivers.csv'), 'r', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            drivers.append(row)
 
-    hour_probability = random.random()
+    return restaurants, drivers
 
-    # Breakfast
-    if hour_probability < 0.10:
-        hour = random.randint(7, 10)
 
-    # Lunch Rush
-    elif hour_probability < 0.45:
-        hour = random.randint(12, 15)
+def get_restaurant_weights(restaurants):
+    weights = []
+    for r in restaurants:
+        rating = float(r['Rating'])
+        if rating >= 4.5:
+            weights.append(50)
+        elif rating >= 4.0:
+            weights.append(25)
+        elif rating >= 3.0:
+            weights.append(10)
+        else:
+            weights.append(3)
+    return weights
 
-    # Evening
-    elif hour_probability < 0.60:
-        hour = random.randint(16, 18)
 
-    # Dinner Rush
-    elif hour_probability < 0.95:
-        hour = random.randint(19, 22)
+def generate_orders(num_orders=100000):
+    restaurants, drivers = load_data()
+    rest_weights = get_restaurant_weights(restaurants)
 
-    # Night
-    else:
-        hour = random.randint(23, 24) % 24
+    # 3 months of data
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=90)
 
-    minute = random.randint(0, 59)
-    second = random.randint(0, 59)
+    payment_methods = ['Credit Card', 'Debit Card', 'UPI', 'Cash on Delivery', 'Wallet']
+    order_statuses = ['Delivered'] * 90 + ['Cancelled'] * 5 + ['Refunded'] * 5
 
-    return hour, minute, second
+    output_file = os.path.join(RAW_DATA_DIR, 'Orders.csv')
+    print(f"Generating {num_orders} orders...")
 
-# ======================================================
-# Generate Orders
-# ======================================================
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        fieldnames = [
+            'OrderID', 'RestaurantID', 'DriverID', 'OrderTime', 'FoodReadyTime',
+            'DriverArrivalTime', 'PickupTime', 'DeliveryTime',
+            'PreparationDelayMins', 'DriverWaitMins', 'DeliveryDurationMins',
+            'OrderAmount', 'PaymentMethod', 'OrderStatus'
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
 
-for order_id in range(1, TOTAL_ORDERS + 1):
+        for i in range(1, num_orders + 1):
+            if i % 10000 == 0:
+                print(f"  Processed {i:,} / {num_orders:,} orders...")
 
-    restaurant = restaurants.sample(1).iloc[0]
+            rest = random.choices(restaurants, weights=rest_weights, k=1)[0]
+            driver = random.choice(drivers)
 
-    driver = drivers.sample(1).iloc[0]
+            order_time = generate_order_time(start_date, end_date)
+            prep_time = get_preparation_time(rest['Cuisine'], float(rest['Rating']))
+            food_ready_time = order_time + timedelta(minutes=prep_time)
 
-    order_date = generate_order_date()
+            driver_offset = get_driver_arrival_offset()
+            driver_arrival_time = order_time + timedelta(minutes=driver_offset)
+            pickup_time = max(food_ready_time, driver_arrival_time) + timedelta(minutes=random.randint(1, 4))
 
-    hour, minute, second = generate_order_time()
+            delivery_dur = get_delivery_duration()
+            delivery_time = pickup_time + timedelta(minutes=delivery_dur)
 
-    order_datetime = order_date.replace(
-        hour=hour,
-        minute=minute,
-        second=second
-    )
+            prep_delay = (food_ready_time - order_time).total_seconds() / 60.0
+            driver_wait = (pickup_time - driver_arrival_time).total_seconds() / 60.0
 
-    orders.append({
+            amt = round(random.uniform(150, 2500), 2)
+            payment = random.choice(payment_methods)
+            status = random.choice(order_statuses)
 
-        "OrderID": order_id,
+            if status != 'Delivered':
+                delivery_time_str = ''
+                delivery_dur_str = ''
+            else:
+                delivery_time_str = delivery_time.strftime('%Y-%m-%d %H:%M:%S')
+                delivery_dur_str = round(delivery_dur, 1)
 
-        "CustomerID": random.randint(100000, 999999),
+            writer.writerow({
+                'OrderID': f"O{str(i).zfill(7)}",
+                'RestaurantID': rest['RestaurantID'],
+                'DriverID': driver['DriverID'],
+                'OrderTime': order_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'FoodReadyTime': food_ready_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'DriverArrivalTime': driver_arrival_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'PickupTime': pickup_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'DeliveryTime': delivery_time_str,
+                'PreparationDelayMins': round(prep_delay, 1),
+                'DriverWaitMins': round(driver_wait, 1),
+                'DeliveryDurationMins': delivery_dur_str,
+                'OrderAmount': amt,
+                'PaymentMethod': payment,
+                'OrderStatus': status
+            })
 
-        "RestaurantID": restaurant["RestaurantID"],
+    print(f"✅ Finished generating {num_orders:,} orders → {output_file}")
 
-        "DriverID": driver["DriverID"],
 
-        "OrderDate": order_datetime.strftime("%Y-%m-%d"),
-
-        "OrderTime": order_datetime.strftime("%H:%M:%S"),
-
-        "City": restaurant["City"]
-
-    })
-
-    if order_id % 10000 == 0:
-        print(f"{order_id} Orders Generated...")
-
-        # ======================================================
-# Save CSV
-# ======================================================
-
-orders_df = pd.DataFrame(orders)
-
-orders_df.to_csv(OUTPUT_FILE, index=False)
-
-print("\nOrders.csv Generated Successfully!")
-
-print(f"\nTotal Orders : {len(orders_df)}")
-
-print(f"\nSaved At : {OUTPUT_FILE}")
+if __name__ == '__main__':
+    generate_orders(100000)
