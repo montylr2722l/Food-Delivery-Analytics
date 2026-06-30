@@ -34,65 +34,75 @@ def generate_reviews():
     orders_file = os.path.join(RAW_DATA_DIR, 'Orders.csv')
     output_file = os.path.join(RAW_DATA_DIR, 'Reviews.csv')
 
-    print("Generating reviews...")
-
-    with open(orders_file, 'r', encoding='utf-8') as f_in, \
-         open(output_file, 'w', newline='', encoding='utf-8') as f_out:
-
+    print("Reading orders...")
+    
+    all_orders = []
+    with open(orders_file, 'r', encoding='utf-8') as f_in:
         reader = csv.DictReader(f_in)
+        for row in reader:
+            all_orders.append(row)
+
+    print(f"Total orders read: {len(all_orders)}")
+    print("Selecting 200,000 orders for reviews...")
+    
+    # We want exactly 200,000 reviews
+    if len(all_orders) < 200000:
+        sampled_orders = all_orders
+    else:
+        sampled_orders = random.sample(all_orders, 200000)
+
+    print("Generating reviews...")
+    with open(output_file, 'w', newline='', encoding='utf-8') as f_out:
         fieldnames = ['OrderID', 'RestaurantID', 'Review', 'Sentiment']
         writer = csv.DictWriter(f_out, fieldnames=fieldnames)
         writer.writeheader()
 
-        count = 0
-        for row in reader:
-            if random.random() < 0.4:
-                count += 1
+        for row in sampled_orders:
+            if row['OrderStatus'] != 'Delivered':
+                sentiment = 'Negative'
+                review_text = random.choice(negative_reviews)
+            else:
+                prep_delay = float(row['PreparationDelayMins']) if row['PreparationDelayMins'] else 15
+                delivery_dur = float(row['DeliveryDurationMins']) if row['DeliveryDurationMins'] else 30
 
-                if row['OrderStatus'] != 'Delivered':
-                    sentiment = 'Negative'
-                    review_text = random.choice(negative_reviews)
-                else:
-                    prep_delay = float(row['PreparationDelayMins']) if row['PreparationDelayMins'] else 15
-                    delivery_dur = float(row['DeliveryDurationMins']) if row['DeliveryDurationMins'] else 30
-
-                    if prep_delay > 35 or delivery_dur > 45:
-                        prob = random.random()
-                        if prob > 0.3:
-                            sentiment = 'Negative'
-                            review_text = random.choice(negative_reviews)
-                        else:
-                            sentiment = 'Neutral'
-                            review_text = random.choice(neutral_reviews)
-                    elif prep_delay < 20 and delivery_dur < 25:
-                        prob = random.random()
-                        if prob > 0.1:
-                            sentiment = 'Positive'
-                            review_text = random.choice(positive_reviews)
-                        else:
-                            sentiment = 'Neutral'
-                            review_text = random.choice(neutral_reviews)
+                if prep_delay > 35 or delivery_dur > 45:
+                    prob = random.random()
+                    if prob > 0.3:
+                        sentiment = 'Negative'
+                        review_text = random.choice(negative_reviews)
                     else:
-                        sentiment = random.choices(
-                            ['Positive', 'Neutral', 'Negative'],
-                            weights=[50, 30, 20], k=1
-                        )[0]
-                        if sentiment == 'Positive':
-                            review_text = random.choice(positive_reviews)
-                        elif sentiment == 'Neutral':
-                            review_text = random.choice(neutral_reviews)
-                        else:
-                            review_text = random.choice(negative_reviews)
+                        sentiment = 'Neutral'
+                        review_text = random.choice(neutral_reviews)
+                elif prep_delay < 20 and delivery_dur < 25:
+                    prob = random.random()
+                    if prob > 0.1:
+                        sentiment = 'Positive'
+                        review_text = random.choice(positive_reviews)
+                    else:
+                        sentiment = 'Neutral'
+                        review_text = random.choice(neutral_reviews)
+                else:
+                    sentiment = random.choices(
+                        ['Positive', 'Neutral', 'Negative'],
+                        weights=[50, 30, 20], k=1
+                    )[0]
+                    if sentiment == 'Positive':
+                        review_text = random.choice(positive_reviews)
+                    elif sentiment == 'Neutral':
+                        review_text = random.choice(neutral_reviews)
+                    else:
+                        review_text = random.choice(negative_reviews)
 
-                writer.writerow({
-                    'OrderID': row['OrderID'],
-                    'RestaurantID': row['RestaurantID'],
-                    'Review': review_text,
-                    'Sentiment': sentiment
-                })
+            writer.writerow({
+                'OrderID': row['OrderID'],
+                'RestaurantID': row['RestaurantID'],
+                'Review': review_text,
+                'Sentiment': sentiment
+            })
 
-    print(f"✅ Finished generating {count:,} reviews → {output_file}")
+    print(f"✅ Finished generating {len(sampled_orders):,} reviews → {output_file}")
 
 
 if __name__ == '__main__':
+    random.seed(42) # Ensure reproducibility 
     generate_reviews()

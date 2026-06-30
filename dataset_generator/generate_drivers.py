@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config import RAW_DATA_DIR
 
 
-def generate_drivers(num_drivers=500):
+def generate_drivers(num_drivers=10000):
     drivers = []
     for i in range(1, num_drivers + 1):
         prob = random.random()
@@ -26,7 +26,7 @@ def generate_drivers(num_drivers=500):
             rating = round(random.uniform(2.0, 3.7), 1)
 
         drivers.append({
-            'DriverID': f"D{str(i).zfill(4)}",
+            'DriverID': f"D{str(i).zfill(5)}",
             'DriverRating': rating,
             'TotalDeliveries': random.randint(50, 5000)
         })
@@ -34,7 +34,7 @@ def generate_drivers(num_drivers=500):
 
 
 if __name__ == '__main__':
-    drivers = generate_drivers(500)
+    drivers = generate_drivers(10000)
     output_file = os.path.join(RAW_DATA_DIR, 'Drivers.csv')
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=['DriverID', 'DriverRating', 'TotalDeliveries'])
