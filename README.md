@@ -20,13 +20,13 @@ Food-Delivery-Analytics/
 │
 ├── dataset_generator/          # Python scripts to generate realistic mock data
 │   ├── utils.py                # Helper functions (time, prep delay logic)
-│   ├── generate_restaurants.py # → data/raw/Restaurants.csv
-│   ├── generate_drivers.py     # → data/raw/Drivers.csv
-│   ├── generate_orders.py      # → data/raw/Orders.csv  (100,000 records)
-│   └── generate_reviews.py     # → data/raw/Reviews.csv  (~40,000 records)
+│   ├── generate_restaurants.py # → data/row/Restaurants.csv
+│   ├── generate_drivers.py     # → data/row/Drivers.csv
+│   ├── generate_orders.py      # → data/row/Orders.csv  (100,000 records)
+│   └── generate_reviews.py     # → data/row/Reviews.csv  (~40,000 records)
 │
 ├── data/
-│   └── raw/                    # Generated CSV files (gitignored)
+│   └── row/                    # Generated CSV files (gitignored)
 │
 ├── notebooks/                  # Databricks PySpark notebooks
 │   ├── 01_data_exploration.py  # Schema checks, stats, data quality
@@ -83,7 +83,7 @@ python dataset_generator/generate_orders.py
 python dataset_generator/generate_reviews.py
 ```
 
-This produces 4 CSV files in `data/raw/`:
+This produces 4 CSV files in `data/row/`:
 | File | Records | Description |
 |---|---|---|
 | `Restaurants.csv` | 250 | Restaurant profiles with cuisines and ratings |
@@ -92,7 +92,7 @@ This produces 4 CSV files in `data/raw/`:
 | `Reviews.csv` | ~40,000 | Customer reviews with sentiment labels |
 
 ### 4. Azure Pipeline Setup
-1. Upload `data/raw/*.csv` to your **ADLS Gen2** container
+1. Upload `data/row/*.csv` to your **ADLS Gen2** container
 2. Import notebooks from `notebooks/` into **Databricks**
 3. Run `sql/create_tables.sql` on your **Azure SQL Warehouse**
 4. Configure the **ADF pipeline** using `adf/pipeline.json` as reference

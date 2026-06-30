@@ -2,7 +2,7 @@
 generate_drivers.py
 -------------------
 Generates 500 drivers with ratings and delivery counts.
-Output: data/raw/Drivers.csv
+Output: data/row/Drivers.csv
 """
 
 import csv

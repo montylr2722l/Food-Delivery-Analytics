@@ -4,7 +4,7 @@ generate_orders.py
 Generates 500,000 realistic food delivery orders.
 
 Output:
-data/raw/Orders.csv
+data/row/Orders.csv
 """
 
 import csv

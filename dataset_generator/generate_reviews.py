@@ -4,7 +4,7 @@ generate_reviews.py
 Reads Orders.csv and generates customer reviews with sentiment.
 - 40% of orders get a review
 - Sentiment based on delivery time and preparation delays
-Output: data/raw/Reviews.csv
+Output: data/row/Reviews.csv
 """
 
 import csv

@@ -24,4 +24,4 @@ Thumbs.db
 .env
 
 # Generated data (regenerate with dataset_generator scripts)
-data/raw/*.csv
+data/row/*.csv

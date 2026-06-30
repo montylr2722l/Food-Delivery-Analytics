@@ -2,7 +2,7 @@
 generate_restaurants.py
 -----------------------
 Generates 5000 restaurants with cuisines, names, and ratings.
-Output: data/raw/Restaurants.csv
+Output: data/row/Restaurants.csv
 """
 
 import csv
